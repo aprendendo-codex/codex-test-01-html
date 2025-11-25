@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Emoji R-Type</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: radial-gradient(circle at 20% 20%, rgba(120, 160, 255, 0.08), transparent 40%),
+            radial-gradient(circle at 80% 30%, rgba(255, 140, 120, 0.08), transparent 45%),
+            #050712;
+      --panel: rgba(255, 255, 255, 0.08);
+      --accent: #7cf0ff;
+      --text: #e8efff;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+      padding: 18px;
+    }
+
+    .hud {
+      width: min(920px, 100%);
+      display: grid;
+      gap: 12px;
+    }
+
+    .title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--panel);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      padding: 12px 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: 1.35rem;
+      letter-spacing: 0.02em;
+    }
+
+    .title span {
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    canvas {
+      width: min(920px, 100%);
+      height: 520px;
+      background: linear-gradient(180deg, rgba(11, 16, 30, 0.9), rgba(5, 7, 18, 0.95));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+    }
+
+    .info {
+      background: var(--panel);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 12px 14px;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .tags {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    .tag {
+      background: rgba(255, 255, 255, 0.06);
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      color: #d4e4ff;
+      letter-spacing: 0.02em;
+    }
+  </style>
+</head>
+<body>
+  <div class="hud">
+    <div class="title">
+      <h1>Emoji R-Type <span>⚔️</span></h1>
+      <div class="tags">
+        <span class="tag">Mover: ← → ou A/D</span>
+        <span class="tag">Subir/Descer: ↑ ↓ ou W/S</span>
+        <span class="tag">Atirar: Espaço ou Clique</span>
+      </div>
+    </div>
+    <canvas id="game" width="900" height="520"></canvas>
+    <div class="info">
+      Destrua as ondas de inimigos e evite colisões. Use emojis como naves, lasers e efeitos para criar um mini shoot-'em-up
+      no estilo clássico R-Type.
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+
+    const state = {
+      player: {
+        x: 80,
+        y: canvas.height / 2,
+        vy: 0,
+        size: 40,
+        emoji: '🚀',
+        cooldown: 0,
+        lives: 3,
+        invincible: 0,
+      },
+      bullets: [],
+      enemies: [],
+      sparks: [],
+      stars: [],
+      keys: new Set(),
+      score: 0,
+      wave: 1,
+      over: false,
+    };
+
+    const controls = {
+      ArrowUp: false,
+      ArrowDown: false,
+      ArrowLeft: false,
+      ArrowRight: false,
+      KeyW: false,
+      KeyA: false,
+      KeyS: false,
+      KeyD: false,
+      Space: false,
+    };
+
+    function initStars() {
+      state.stars = Array.from({ length: 80 }, () => ({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        speed: 1 + Math.random() * 2,
+        size: Math.random() * 2,
+      }));
+    }
+
+    function drawStars(dt) {
+      ctx.fillStyle = '#0b1228';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      state.stars.forEach(star => {
+        star.x -= star.speed * dt * 0.06;
+        if (star.x < -2) {
+          star.x = canvas.width + Math.random() * 40;
+          star.y = Math.random() * canvas.height;
+        }
+        ctx.fillStyle = `rgba(255,255,255,${0.5 + Math.random() * 0.5})`;
+        ctx.fillRect(star.x, star.y, star.size + 0.8, star.size + 0.8);
+      });
+    }
+
+    function drawTextWithEmoji(text, x, y, size = 36) {
+      ctx.font = `${size}px Apple Color Emoji, Noto Color Emoji, Segoe UI Emoji, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, x, y);
+    }
+
+    function spawnEnemy() {
+      const emojis = ['👾', '🛸', '🤖', '☄️'];
+      const emoji = emojis[Math.floor(Math.random() * emojis.length)];
+      const speed = 1.4 + Math.random() * 1.8 + state.wave * 0.05;
+      const health = emoji === '🤖' ? 2 : 1;
+      state.enemies.push({
+        x: canvas.width + 40,
+        y: 60 + Math.random() * (canvas.height - 120),
+        size: 34,
+        emoji,
+        speed,
+        health,
+      });
+    }
+
+    function shoot() {
+      if (state.player.cooldown > 0) return;
+      state.bullets.push({
+        x: state.player.x + 28,
+        y: state.player.y,
+        vx: 9,
+        emoji: '🔹',
+      });
+      state.player.cooldown = 220; // ms
+    }
+
+    function updatePlayer(dt) {
+      const p = state.player;
+      const accel = 0.6;
+      const maxSpeed = 5;
+      if (controls.ArrowUp || controls.KeyW) p.vy -= accel;
+      if (controls.ArrowDown || controls.KeyS) p.vy += accel;
+      if (controls.ArrowLeft || controls.KeyA) p.x -= 4;
+      if (controls.ArrowRight || controls.KeyD) p.x += 4;
+
+      p.vy *= 0.9;
+      p.vy = Math.max(-maxSpeed, Math.min(maxSpeed, p.vy));
+      p.y += p.vy;
+
+      p.y = Math.max(50, Math.min(canvas.height - 50, p.y));
+      p.x = Math.max(40, Math.min(canvas.width / 2.5, p.x));
+
+      if ((controls.Space) && !state.over) {
+        shoot();
+      }
+
+      if (p.cooldown > 0) p.cooldown -= dt;
+      if (p.invincible > 0) p.invincible -= dt;
+    }
+
+    function updateBullets(dt) {
+      state.bullets.forEach(b => b.x += b.vx * dt * 0.06);
+      state.bullets = state.bullets.filter(b => b.x < canvas.width + 40);
+    }
+
+    function updateEnemies(dt) {
+      state.enemies.forEach(e => e.x -= e.speed * dt * 0.06);
+      state.enemies = state.enemies.filter(e => e.x > -80 && e.health > 0);
+    }
+
+    function addSpark(x, y, emoji) {
+      state.sparks.push({ x, y, life: 600, emoji });
+    }
+
+    function updateSparks(dt) {
+      state.sparks.forEach(s => s.life -= dt);
+      state.sparks = state.sparks.filter(s => s.life > 0);
+    }
+
+    function collisions() {
+      state.enemies.forEach(e => {
+        state.bullets.forEach(b => {
+          if (Math.abs(e.x - b.x) < 26 && Math.abs(e.y - b.y) < 26) {
+            e.health -= 1;
+            addSpark(b.x, b.y, '✨');
+            state.score += 10;
+            b.x = canvas.width + 100;
+          }
+        });
+
+        const p = state.player;
+        if (p.invincible <= 0 && Math.abs(e.x - p.x) < 28 && Math.abs(e.y - p.y) < 28) {
+          p.lives -= 1;
+          p.invincible = 1600;
+          addSpark(p.x, p.y, '💥');
+          if (p.lives <= 0) state.over = true;
+        }
+      });
+    }
+
+    function spawnWave(dt) {
+      const target = 900 - state.wave * 10;
+      if (Math.random() * target < dt) spawnEnemy();
+    }
+
+    function drawUI() {
+      ctx.textAlign = 'left';
+      ctx.font = '18px "Inter", system-ui, sans-serif';
+      ctx.fillStyle = '#d8e7ff';
+      ctx.fillText(`Pontuação: ${state.score}`, 16, 26);
+      ctx.fillText(`Wave: ${state.wave}`, 16, 48);
+      ctx.fillText(`Vidas: ${'❤️'.repeat(state.player.lives)}`, 16, 70);
+
+      if (state.over) {
+        ctx.textAlign = 'center';
+        ctx.font = '28px "Inter", system-ui, sans-serif';
+        ctx.fillStyle = '#f6b0c2';
+        ctx.fillText('Game Over - pressione R para reiniciar', canvas.width / 2, canvas.height / 2);
+      }
+    }
+
+    function drawEntities() {
+      state.sparks.forEach(s => drawTextWithEmoji(s.emoji, s.x, s.y, 30));
+      state.bullets.forEach(b => drawTextWithEmoji(b.emoji, b.x, b.y, 24));
+      state.enemies.forEach(e => drawTextWithEmoji(e.emoji, e.x, e.y, e.size));
+      const playerAlpha = state.player.invincible > 0 ? 0.6 : 1;
+      ctx.globalAlpha = playerAlpha;
+      drawTextWithEmoji(state.player.emoji, state.player.x, state.player.y, state.player.size);
+      ctx.globalAlpha = 1;
+    }
+
+    let last = 0;
+    function loop(timestamp) {
+      const dt = timestamp - last;
+      last = timestamp;
+
+      drawStars(dt);
+      spawnWave(dt);
+      updatePlayer(dt);
+      updateBullets(dt);
+      updateEnemies(dt);
+      updateSparks(dt);
+      collisions();
+
+      state.wave += dt * 0.00008;
+
+      drawEntities();
+      drawUI();
+
+      requestAnimationFrame(loop);
+    }
+
+    function resetGame() {
+      state.player.x = 80;
+      state.player.y = canvas.height / 2;
+      state.player.vy = 0;
+      state.player.lives = 3;
+      state.player.invincible = 1200;
+      state.bullets = [];
+      state.enemies = [];
+      state.sparks = [];
+      state.score = 0;
+      state.wave = 1;
+      state.over = false;
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (controls.hasOwnProperty(e.code)) controls[e.code] = true;
+      if (e.code === 'Space') e.preventDefault();
+      if (state.over && e.code === 'KeyR') {
+        resetGame();
+      }
+    });
+
+    document.addEventListener('keyup', (e) => {
+      if (controls.hasOwnProperty(e.code)) controls[e.code] = false;
+    });
+
+    canvas.addEventListener('click', () => {
+      if (state.over) return resetGame();
+      shoot();
+    });
+
+    initStars();
+    resetGame();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
