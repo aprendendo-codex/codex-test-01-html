@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hello World</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: radial-gradient(circle at 15% 20%, rgba(76, 122, 241, 0.16), transparent 35%),
+        radial-gradient(circle at 80% 0%, rgba(16, 185, 129, 0.16), transparent 30%),
+        #f7f7f7;
+      --text: #141b2f;
+      --muted: #4b5563;
+      --accent: #4c7af1;
+      --accent-strong: #3b67d8;
+      --card: #ffffff;
+      --border: rgba(76, 122, 241, 0.12);
+      --shadow: 0 16px 60px rgba(17, 24, 39, 0.18);
+      --radius: 18px;
+      --code-bg: #0f172a;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: radial-gradient(circle at 20% 20%, rgba(76, 122, 241, 0.16), transparent 40%),
+          radial-gradient(circle at 90% 10%, rgba(16, 185, 129, 0.18), transparent 35%),
+          #0f172a;
+        --text: #e5e7eb;
+        --muted: #cbd5e1;
+        --card: #0b1221;
+        --border: rgba(76, 122, 241, 0.2);
+        --shadow: 0 18px 70px rgba(0, 0, 0, 0.5);
+        --code-bg: #0b1325;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: var(--bg);
+      color: var(--text);
+      padding: 32px;
+    }
+
+    main {
+      width: min(900px, 100%);
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 18px;
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .hero {
+      padding: 32px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: linear-gradient(135deg, rgba(76, 122, 241, 0.12), rgba(16, 185, 129, 0.12));
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      color: var(--text);
+      width: fit-content;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 3vw + 0.8rem, 2.8rem);
+      letter-spacing: -0.02em;
+    }
+
+    .lead {
+      font-size: 1.08rem;
+      line-height: 1.7;
+      color: var(--muted);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    button {
+      border: none;
+      background: linear-gradient(120deg, var(--accent), var(--accent-strong));
+      color: white;
+      padding: 12px 16px;
+      font-weight: 700;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform 120ms ease, box-shadow 120ms ease;
+      box-shadow: 0 8px 24px rgba(76, 122, 241, 0.35);
+    }
+
+    button:focus-visible {
+      outline: 3px solid rgba(76, 122, 241, 0.5);
+      outline-offset: 2px;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+    }
+
+    .secondary {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+      box-shadow: none;
+    }
+
+    ul {
+      list-style: none;
+      display: grid;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .item {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      padding: 12px 12px;
+      background: rgba(76, 122, 241, 0.06);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+
+    .item svg {
+      width: 18px;
+      height: 18px;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .item span {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .panel {
+      padding: 28px;
+      background: linear-gradient(180deg, rgba(76, 122, 241, 0.08), rgba(16, 185, 129, 0.06));
+      border-left: 1px solid var(--border);
+      display: grid;
+      gap: 14px;
+    }
+
+    .panel h2 {
+      font-size: 1.1rem;
+      letter-spacing: -0.01em;
+    }
+
+    .code {
+      background: var(--code-bg);
+      color: #e5e7eb;
+      padding: 16px;
+      border-radius: 12px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.95rem;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+    }
+
+    .note {
+      font-size: 0.95rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .message {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(16, 185, 129, 0.12);
+      color: var(--text);
+      margin-top: 6px;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      visibility: hidden;
+      opacity: 0;
+      transition: visibility 120ms ease, opacity 120ms ease;
+    }
+
+    .message.show {
+      visibility: visible;
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <div class="badge" aria-hidden="true">HTML Starter</div>
+      <h1>Hello, World!</h1>
+      <p class="lead">
+        A crisp starting point for experiments, demos, or onboarding new ideas. Tweak the content, add components, and ship
+        something delightful.
+      </p>
+      <div class="actions">
+        <button id="showGreeting" type="button">Show Greeting</button>
+        <button class="secondary" type="button" onclick="location.reload()">Reset</button>
+      </div>
+      <div class="message" id="greeting" role="status" aria-live="polite"></div>
+      <ul aria-label="Starter checklist">
+        <li class="item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+          <span>Single-file demo—copy and run instantly.</span>
+        </li>
+        <li class="item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+          <span>Responsive layout with a friendly gradient backdrop.</span>
+        </li>
+        <li class="item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+          <span>Accessible buttons and live greeting feedback.</span>
+        </li>
+      </ul>
+    </section>
+    <section class="panel" aria-label="Quick start">
+      <h2>Quick start</h2>
+      <div class="code">
+        <pre><code>&lt;!-- Save as index.html and open in your browser --&gt;
+&lt;h1&gt;Hello, World!&lt;/h1&gt;
+&lt;p&gt;You're ready to build something great.&lt;/p&gt;</code></pre>
+      </div>
+      <p class="note">
+        Swap out the text above with your own idea, replace the checklist with your features, and keep iterating. This layout
+        is intentionally minimal so you can focus on content.
+      </p>
+    </section>
+  </main>
+
+  <script>
+    const greeting = document.getElementById("greeting");
+    const button = document.getElementById("showGreeting");
+
+    const greetings = [
+      "Hello, World! You're all set.",
+      "Welcome! Build something great today.",
+      "Hi there — the canvas is yours.",
+    ];
+
+    function formatTime(date) {
+      const hours = String(date.getHours()).padStart(2, "0");
+      const minutes = String(date.getMinutes()).padStart(2, "0");
+      return `${hours}:${minutes}`;
+    }
+
+    button.addEventListener("click", () => {
+      const message = greetings[Math.floor(Math.random() * greetings.length)];
+      const time = formatTime(new Date());
+      greeting.textContent = `${message} (refreshed at ${time})`;
+      greeting.classList.add("show");
+    });
+  </script>
+</body>
+</html>
