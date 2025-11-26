@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Emoji R-Type</title>
+  <title>Sprite R-Type</title>
   <style>
     :root {
       color-scheme: dark;
@@ -94,7 +94,7 @@
 <body>
   <div class="hud">
     <div class="title">
-      <h1>Emoji R-Type <span>⚔️</span></h1>
+      <h1>Sprite R-Type <span>⚔️</span></h1>
       <div class="tags">
         <span class="tag">Mover: ← → ou A/D</span>
         <span class="tag">Subir/Descer: ↑ ↓ ou W/S</span>
@@ -103,8 +103,8 @@
     </div>
     <canvas id="game" width="900" height="520"></canvas>
     <div class="info">
-      Destrua as ondas de inimigos e evite colisões. Use emojis como naves, lasers e efeitos para criar um mini shoot-'em-up
-      no estilo clássico R-Type.
+      Destrua as ondas de inimigos e evite colisões. Agora usamos sprites inspirados no clássico R-Type em vez de emojis
+      para dar mais cara de arcade à demo.
     </div>
   </div>
 
@@ -112,13 +112,25 @@
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
 
+    const spriteSheet = new Image();
+    spriteSheet.src = 'spritesheet.svg';
+
+    const sprites = {
+      player: { x: 12, y: 14, w: 48, h: 32 },
+      enemy1: { x: 80, y: 8, w: 32, h: 32 },
+      enemy2: { x: 120, y: 6, w: 36, h: 36 },
+      bullet: { x: 170, y: 12, w: 16, h: 10 },
+      explosion: { x: 200, y: 4, w: 40, h: 40 },
+      life: { x: 16, y: 92, w: 18, h: 14 },
+    };
+
     const state = {
       player: {
         x: 80,
         y: canvas.height / 2,
         vy: 0,
         size: 40,
-        emoji: '🚀',
+        sprite: 'player',
         cooldown: 0,
         lives: 3,
         invincible: 0,
@@ -168,23 +180,27 @@
       });
     }
 
-    function drawTextWithEmoji(text, x, y, size = 36) {
-      ctx.font = `${size}px Apple Color Emoji, Noto Color Emoji, Segoe UI Emoji, sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(text, x, y);
+    function drawSprite(name, x, y, scale = 1, alpha = 1) {
+      const s = sprites[name];
+      if (!s) return;
+      const dw = s.w * scale;
+      const dh = s.h * scale;
+      const oldAlpha = ctx.globalAlpha;
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(spriteSheet, s.x, s.y, s.w, s.h, x - dw / 2, y - dh / 2, dw, dh);
+      ctx.globalAlpha = oldAlpha;
     }
 
     function spawnEnemy() {
-      const emojis = ['👾', '🛸', '🤖', '☄️'];
-      const emoji = emojis[Math.floor(Math.random() * emojis.length)];
+      const enemyTypes = ['enemy1', 'enemy2'];
+      const sprite = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
       const speed = 1.4 + Math.random() * 1.8 + state.wave * 0.05;
-      const health = emoji === '🤖' ? 2 : 1;
+      const health = sprite === 'enemy2' ? 2 : 1;
       state.enemies.push({
         x: canvas.width + 40,
         y: 60 + Math.random() * (canvas.height - 120),
-        size: 34,
-        emoji,
+        size: sprite === 'enemy2' ? 42 : 34,
+        sprite,
         speed,
         health,
       });
@@ -196,7 +212,7 @@
         x: state.player.x + 28,
         y: state.player.y,
         vx: 9,
-        emoji: '🔹',
+        sprite: 'bullet',
       });
       state.player.cooldown = 220; // ms
     }
@@ -235,8 +251,8 @@
       state.enemies = state.enemies.filter(e => e.x > -80 && e.health > 0);
     }
 
-    function addSpark(x, y, emoji) {
-      state.sparks.push({ x, y, life: 600, emoji });
+    function addSpark(x, y, sprite = 'explosion', scale = 1) {
+      state.sparks.push({ x, y, life: 600, sprite, scale });
     }
 
     function updateSparks(dt) {
@@ -249,7 +265,7 @@
         state.bullets.forEach(b => {
           if (Math.abs(e.x - b.x) < 26 && Math.abs(e.y - b.y) < 26) {
             e.health -= 1;
-            addSpark(b.x, b.y, '✨');
+            addSpark(b.x, b.y, 'explosion', 0.55);
             state.score += 10;
             b.x = canvas.width + 100;
           }
@@ -259,7 +275,7 @@
         if (p.invincible <= 0 && Math.abs(e.x - p.x) < 28 && Math.abs(e.y - p.y) < 28) {
           p.lives -= 1;
           p.invincible = 1600;
-          addSpark(p.x, p.y, '💥');
+          addSpark(p.x, p.y, 'explosion', 0.9);
           if (p.lives <= 0) state.over = true;
         }
       });
@@ -276,7 +292,10 @@
       ctx.fillStyle = '#d8e7ff';
       ctx.fillText(`Pontuação: ${state.score}`, 16, 26);
       ctx.fillText(`Wave: ${state.wave}`, 16, 48);
-      ctx.fillText(`Vidas: ${'❤️'.repeat(state.player.lives)}`, 16, 70);
+      ctx.fillText('Vidas:', 16, 70);
+      for (let i = 0; i < state.player.lives; i++) {
+        drawSprite('life', 80 + i * 22, 66, 1, 0.95);
+      }
 
       if (state.over) {
         ctx.textAlign = 'center';
@@ -287,13 +306,11 @@
     }
 
     function drawEntities() {
-      state.sparks.forEach(s => drawTextWithEmoji(s.emoji, s.x, s.y, 30));
-      state.bullets.forEach(b => drawTextWithEmoji(b.emoji, b.x, b.y, 24));
-      state.enemies.forEach(e => drawTextWithEmoji(e.emoji, e.x, e.y, e.size));
+      state.sparks.forEach(s => drawSprite(s.sprite, s.x, s.y, s.scale));
+      state.bullets.forEach(b => drawSprite(b.sprite, b.x, b.y, 1.1));
+      state.enemies.forEach(e => drawSprite(e.sprite, e.x, e.y, e.size / sprites[e.sprite].w));
       const playerAlpha = state.player.invincible > 0 ? 0.6 : 1;
-      ctx.globalAlpha = playerAlpha;
-      drawTextWithEmoji(state.player.emoji, state.player.x, state.player.y, state.player.size);
-      ctx.globalAlpha = 1;
+      drawSprite(state.player.sprite, state.player.x, state.player.y, state.player.size / sprites[state.player.sprite].w, playerAlpha);
     }
 
     let last = 0;
@@ -350,7 +367,8 @@
 
     initStars();
     resetGame();
-    requestAnimationFrame(loop);
+    spriteSheet.onload = () => requestAnimationFrame(loop);
+    if (spriteSheet.complete) spriteSheet.onload();
   </script>
 </body>
 </html>
