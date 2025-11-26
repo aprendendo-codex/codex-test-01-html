@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sokoban Challenge</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --wall: #1f2937;
+      --floor: #0b1324;
+      --goal: #22d3ee;
+      --box: #f59e0b;
+      --box-goal: #34d399;
+      --player: #60a5fa;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at 20% 20%, #1f2937, #0b1324 45%),
+                  radial-gradient(circle at 80% 0%, #0ea5e9, #0f172a 45%),
+                  var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+    }
+
+    .shell {
+      width: min(960px, 100%);
+      background: rgba(12, 19, 38, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 18px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+      overflow: hidden;
+      backdrop-filter: blur(8px);
+    }
+
+    header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .title-group h1 {
+      margin: 0;
+      font-size: 24px;
+      letter-spacing: 0.4px;
+    }
+
+    .title-group p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      background: linear-gradient(135deg, #2563eb, #0ea5e9);
+      color: #f8fafc;
+      border: none;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+      box-shadow: 0 8px 20px rgba(14, 165, 233, 0.35);
+    }
+
+    button:hover { transform: translateY(-1px); filter: brightness(1.03); }
+    button:active { transform: translateY(0); filter: brightness(0.98); }
+
+    .content {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 20px;
+      padding: 20px 24px 24px;
+    }
+
+    .board {
+      background: var(--panel);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 14px;
+      padding: 16px;
+      position: relative;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(var(--cols), 42px);
+      grid-template-rows: repeat(var(--rows), 42px);
+      gap: 4px;
+      justify-content: center;
+      margin: 0 auto;
+    }
+
+    .cell {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      background: var(--floor);
+      display: grid;
+      place-items: center;
+      position: relative;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04),
+                  inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+    }
+
+    .wall { background: var(--wall); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); }
+    .goal { background: linear-gradient(135deg, rgba(34, 211, 238, 0.45), rgba(14, 165, 233, 0.35)); box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.25); }
+    .box { background: var(--box); box-shadow: 0 6px 12px rgba(245, 158, 11, 0.35); }
+    .box.goal { background: var(--box-goal); box-shadow: 0 6px 12px rgba(52, 211, 153, 0.35); }
+
+    .player {
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      background: radial-gradient(circle at 25% 25%, #93c5fd, #2563eb);
+      box-shadow: 0 4px 10px rgba(96, 165, 250, 0.4), 0 0 0 2px rgba(255, 255, 255, 0.05);
+      position: relative;
+    }
+
+    .player::after {
+      content: "";
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.85);
+      top: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+      opacity: 0.8;
+    }
+
+    .sidebar {
+      background: var(--panel);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 14px;
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .stat {
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .stat .label { color: var(--muted); font-size: 13px; }
+    .stat .value { font-weight: 800; letter-spacing: 0.4px; }
+
+    .instructions {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 12px;
+      padding: 12px 14px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(34, 211, 238, 0.12);
+      color: #22d3ee;
+      padding: 6px 10px;
+      border-radius: 10px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      font-size: 13px;
+    }
+
+    .toast {
+      position: absolute;
+      inset: 12px;
+      pointer-events: none;
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-end;
+    }
+
+    .toast .message {
+      background: rgba(52, 211, 153, 0.12);
+      border: 1px solid rgba(52, 211, 153, 0.5);
+      color: #a7f3d0;
+      padding: 10px 14px;
+      border-radius: 12px;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+      transform: translateY(10px);
+      opacity: 0;
+      transition: all 180ms ease;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+
+    .toast.show .message { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 840px) {
+      .content { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="title-group">
+        <h1>Sokoban Mini</h1>
+        <p>Push every crate onto the glowing goals. Use arrow keys, WASD, or tap the controls.</p>
+      </div>
+      <div class="controls">
+        <button id="reset">Reset</button>
+      </div>
+    </header>
+
+    <div class="content">
+      <section class="board">
+        <div id="toast" class="toast"><div class="message">Level Complete!</div></div>
+        <div id="grid" class="grid"></div>
+      </section>
+
+      <aside class="sidebar">
+        <div class="stats">
+          <div class="stat">
+            <div class="label">Level</div>
+            <div class="value" id="levelLabel">1 / 1</div>
+          </div>
+          <div class="stat">
+            <div class="label">Moves</div>
+            <div class="value" id="moveCount">0</div>
+          </div>
+        </div>
+
+        <div class="instructions">
+          <div class="badge">How to Play</div>
+          <p>Move with <strong>Arrow Keys</strong> or <strong>WASD</strong>. Push crates onto the cyan goal tiles. Crates cannot move through walls, and you can only push one crate at a time.</p>
+          <p>Use the <strong>Reset</strong> button anytime to restart the level.</p>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const levels = [
+      [
+        "##########",
+        "#........#",
+        "#..$.$...#",
+        "#..##....#",
+        "#..@..#..#",
+        "#....#...#",
+        "#..#..#..#",
+        "#..O..$..#",
+        "#........#",
+        "##########"
+      ]
+    ];
+
+    const wall = '#';
+    const goal = 'O';
+    const playerSymbol = '@';
+    const box = '$';
+
+    const gridEl = document.getElementById('grid');
+    const moveCountEl = document.getElementById('moveCount');
+    const levelLabelEl = document.getElementById('levelLabel');
+    const toastEl = document.getElementById('toast');
+
+    let currentLevel = 0;
+    let baseTiles, boxes, goals, player, moveCount;
+
+    function parseLevel() {
+      const rows = levels[currentLevel];
+      baseTiles = [];
+      boxes = new Set();
+      goals = new Set();
+      moveCount = 0;
+
+      rows.forEach((line, r) => {
+        const row = [];
+        [...line].forEach((ch, c) => {
+          if (ch === wall) {
+            row.push('wall');
+          } else {
+            row.push('floor');
+            if (ch === goal) goals.add(key(r, c));
+            if (ch === box) boxes.add(key(r, c));
+            if (ch === playerSymbol) player = { r, c };
+          }
+        });
+        baseTiles.push(row);
+      });
+
+      gridEl.style.setProperty('--cols', rows[0].length);
+      gridEl.style.setProperty('--rows', rows.length);
+      levelLabelEl.textContent = `${currentLevel + 1} / ${levels.length}`;
+      moveCountEl.textContent = moveCount;
+      render();
+    }
+
+    function key(r, c) { return `${r},${c}`; }
+
+    function render() {
+      gridEl.innerHTML = '';
+      baseTiles.forEach((row, r) => {
+        row.forEach((tile, c) => {
+          const cell = document.createElement('div');
+          cell.className = `cell ${tile === 'wall' ? 'wall' : ''}`;
+
+          const posKey = key(r, c);
+          const isGoal = goals.has(posKey);
+          const hasBox = boxes.has(posKey);
+          const isPlayer = player.r === r && player.c === c;
+
+          if (isGoal && tile !== 'wall') cell.classList.add('goal');
+          if (hasBox && tile !== 'wall') {
+            const boxEl = document.createElement('div');
+            boxEl.className = `box ${isGoal ? 'goal' : ''}`;
+            cell.appendChild(boxEl);
+          }
+          if (isPlayer) {
+            const p = document.createElement('div');
+            p.className = 'player';
+            cell.appendChild(p);
+          }
+
+          gridEl.appendChild(cell);
+        });
+      });
+    }
+
+    function movePlayer(dr, dc) {
+      const target = { r: player.r + dr, c: player.c + dc };
+      if (!inside(target)) return;
+      if (baseTiles[target.r][target.c] === 'wall') return;
+
+      const targetKey = key(target.r, target.c);
+      const hasBox = boxes.has(targetKey);
+
+      if (hasBox) {
+        const beyond = { r: target.r + dr, c: target.c + dc };
+        if (!inside(beyond)) return;
+        if (baseTiles[beyond.r][beyond.c] === 'wall') return;
+        const beyondKey = key(beyond.r, beyond.c);
+        if (boxes.has(beyondKey)) return;
+        boxes.delete(targetKey);
+        boxes.add(beyondKey);
+      }
+
+      player = target;
+      moveCount++;
+      moveCountEl.textContent = moveCount;
+      render();
+      checkWin();
+    }
+
+    function inside(pos) {
+      return pos.r >= 0 && pos.c >= 0 && pos.r < baseTiles.length && pos.c < baseTiles[0].length;
+    }
+
+    function checkWin() {
+      const allOnGoals = [...boxes].every(b => goals.has(b));
+      if (allOnGoals) {
+        toastEl.classList.add('show');
+        setTimeout(() => toastEl.classList.remove('show'), 1700);
+      }
+    }
+
+    function handleKey(e) {
+      const keyMap = {
+        ArrowUp: [-1, 0],
+        ArrowDown: [1, 0],
+        ArrowLeft: [0, -1],
+        ArrowRight: [0, 1],
+        w: [-1, 0], a: [0, -1], s: [1, 0], d: [0, 1],
+        W: [-1, 0], A: [0, -1], S: [1, 0], D: [0, 1]
+      };
+      if (keyMap[e.key]) {
+        e.preventDefault();
+        movePlayer(...keyMap[e.key]);
+      }
+    }
+
+    document.getElementById('reset').addEventListener('click', parseLevel);
+    window.addEventListener('keydown', handleKey);
+
+    parseLevel();
+  </script>
+</body>
+</html>
